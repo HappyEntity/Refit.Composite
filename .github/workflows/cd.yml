@@ -33,8 +33,11 @@ jobs:
             - name: Restore dependencies
               run: dotnet restore
 
+            - name: Build Solution
+              run: dotnet build --configuration Release --no-restore
+
             - name: Pack NuGet Package
-              run: dotnet pack src/Refit.Composite/Refit.Composite.csproj --configuration Release /p:PackageVersion=${{ env.VERSION }} --output ./dist
+              run: dotnet pack src/Refit.Composite/Refit.Composite.csproj --configuration Release /p:PackageVersion=${{ env.VERSION }} --no-build --output ./dist
 
             - name: NuGet login (OIDC)
               uses: NuGet/login@v1
