@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="LICENSE" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Refit.Composite/Refit.Composite.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Refit.Composite.Benchmarks/Refit.Composite.Benchmarks.csproj" />
+    <Project Path="tests/Refit.Composite.Sample/Refit.Composite.Sample.csproj" />
+    <Project Path="tests/Refit.Composite.Tests/Refit.Composite.Tests.csproj" />
+  </Folder>
+</Solution>
