@@ -1,4 +1,4 @@
-# Refit.Composite
+# Refit.Composite ![NuGet Version](https://img.shields.io/nuget/v/HappyEntity.Refit.Composite)
 
 A lightweight, high-performance architectural wrapper for [Refit](https://github.com/reactiveui/refit) that orchestrates multiple isolated API contracts into unified, Scoped composite services with sophisticated message handler pipeline management.
 
