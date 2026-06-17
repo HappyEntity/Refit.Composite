@@ -4,6 +4,7 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/Refit.Composite.SourceGenerator/Refit.Composite.SourceGenerator.csproj" />
     <Project Path="src/Refit.Composite/Refit.Composite.csproj" />
   </Folder>
   <Folder Name="/tests/">

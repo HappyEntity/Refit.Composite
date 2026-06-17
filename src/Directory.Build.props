@@ -1,5 +1,9 @@
 <Project>
-    <Import Project="$([MsBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+    <Import Project="$([MsBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))"/>
+
+    <PropertyGroup>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    </PropertyGroup>
 
     <PropertyGroup>
         <Authors>Happy Entity</Authors>
@@ -11,7 +15,6 @@
         <RepositoryUrl>https://github.com/HappyEntity/Refit.Composite</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageTags>Refit;HttpClient;Rest;API;Composite;Wrapper</PackageTags>
-        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 
         <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>

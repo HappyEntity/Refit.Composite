@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Refit;
 using Refit.Composite;
@@ -14,7 +15,7 @@ public static class RefitCompositeExtensions
 {
     /// <summary>
     /// Registers a composite Refit API interface in the dependency injection container using a <see cref="String"/> base URL.
-    /// This method scans the interface properties, builds individual Refit clients with their respective message handler pipelines, 
+    /// This method scans the interface properties, builds individual Refit clients with their respective message handler pipelines,
     /// and registers a dynamic proxy to orchestrate requests.
     /// </summary>
     /// <typeparam name="TApi">The composite interface type that inherits from <see cref="IRefitComposite"/>.</typeparam>
@@ -26,16 +27,21 @@ public static class RefitCompositeExtensions
     /// <exception cref="ArgumentException">Thrown when <paramref name="baseApi"/> is null or empty.</exception>
     /// <exception cref="UriFormatException">Thrown when <paramref name="baseApi"/> is not a valid URI.</exception>
     /// <exception cref="InvalidDataException">Thrown when the composite interface contains duplicate API definitions or invalid handler registrations.</exception>
-    public static IServiceCollection AddRefitComposite<TApi>(this IServiceCollection services,
+    [RequiresUnreferencedCode("Scans composite API interface properties via reflection to configure HttpClient pipelines.")]
+    public static IServiceCollection AddRefitComposite<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)]
+        TApi>(
+        this IServiceCollection services,
         string baseApi, RefitSettings? settings = null, Action<IHttpClientBuilder>? configure = null)
         where TApi : class, IRefitComposite
     {
+        ArgumentException.ThrowIfNullOrEmpty(baseApi);
         return services.AddRefitComposite<TApi>(new Uri(baseApi), settings, configure);
     }
 
     /// <summary>
     /// Registers a composite Refit API interface in the dependency injection container using a <see cref="Uri"/> base URL.
-    /// This method scans the interface properties, builds individual Refit clients with their respective message handler pipelines, 
+    /// This method scans the interface properties, builds individual Refit clients with their respective message handler pipelines,
     /// and registers a dynamic proxy to orchestrate requests.
     /// </summary>
     /// <typeparam name="TApi">The composite interface type that inherits from <see cref="IRefitComposite"/>.</typeparam>
@@ -45,7 +51,10 @@ public static class RefitCompositeExtensions
     /// <param name="configure">An optional delegate to further configure the underlying <see cref="IHttpClientBuilder"/> for each registered API client.</param>
     /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
     /// <exception cref="InvalidDataException">Thrown when the composite interface contains duplicate API definitions or invalid handler registrations.</exception>
-    public static IServiceCollection AddRefitComposite<TApi>(this IServiceCollection services,
+    [RequiresUnreferencedCode("Scans composite API interface properties via reflection to configure HttpClient pipelines.")]
+    public static IServiceCollection AddRefitComposite<
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TApi>(
+        this IServiceCollection services,
         Uri baseApi, RefitSettings? settings = null, Action<IHttpClientBuilder>? configure = null)
         where TApi : class, IRefitComposite
     {
@@ -58,20 +67,34 @@ public static class RefitCompositeExtensions
 
         var globalHandlers = GetGlobalHandlers(typeof(TApi));
 
-        foreach (var property in properties)
-        {
+        foreach (var property in properties) {
             ConfigureApiProperty(services, property, baseApi, settings, globalHandlers, configure);
         }
 
-        services.AddScoped(RefitCompositeProxy.Create<TApi>);
+        var interfaceType = typeof(TApi);
+        var expectedClassName = interfaceType.Name.Substring(1) + "Generated";
+
+        // Ищем класс по имени среди всех типов сборки, где объявлен интерфейс пользователя
+        var generatedType = interfaceType.Assembly.GetTypes()
+            .FirstOrDefault(t => t.Name == expectedClassName && typeof(TApi).IsAssignableFrom(t));
+
+        if (generatedType == null) {
+            throw new InvalidOperationException(
+                $"Refit.Composite Source Generator failed to run or produce the implementation class '{expectedClassName}' " +
+                $"for interface '{interfaceType.Name}'. Please ensure the project has been built successfully.");
+        }
+
+        // Регистрируем найденный сгенерированный класс в DI
+        services.AddScoped(interfaceType, generatedType);
+
+        //services.AddScoped(RefitCompositeProxy.Create<TApi>);
 
         return services;
     }
 
     private static void ValidateCompositeInterface<TApi>(PropertyInfo[] properties)
     {
-        if (properties.GroupBy(x => x.PropertyType).Any(x => x.Count() > 1))
-        {
+        if (properties.GroupBy(x => x.PropertyType).Any(x => x.Count() > 1)) {
             throw new InvalidDataException(
                 $"The composite API interface '{typeof(TApi).Name}' contains duplicate API interface definitions.");
         }
@@ -100,16 +123,14 @@ public static class RefitCompositeExtensions
     {
         var builder = services
             .AddRefitClient(property.PropertyType, settings)
-            .ConfigureHttpClient(c =>
-            {
+            .ConfigureHttpClient(c => {
                 c.BaseAddress = baseApi;
                 c.Timeout = TimeSpan.FromMinutes(10);
             });
 
         var finalPipeline = BuildPipelineForProperty(property, globalHandlers);
 
-        foreach (var handler in finalPipeline)
-        {
+        foreach (var handler in finalPipeline) {
             builder.AddHttpMessageHandler(sp => (DelegatingHandler)sp.GetRequiredService(handler));
         }
 
@@ -121,10 +142,8 @@ public static class RefitCompositeExtensions
         var activeHandlers = new List<Type>(globalHandlers);
         var propertyAttributes = property.GetCustomAttributes(typeof(Attribute), true);
 
-        foreach (var attr in propertyAttributes)
-        {
-            switch (attr)
-            {
+        foreach (var attr in propertyAttributes) {
+            switch (attr) {
                 case ApiIgnoreAllHandlersAttribute:
                     activeHandlers.Clear();
                     break;
@@ -134,8 +153,7 @@ public static class RefitCompositeExtensions
                     break;
 
                 case ApiHandlerAttribute handlerAttr:
-                    if (!activeHandlers.Contains(handlerAttr.Handler))
-                    {
+                    if (!activeHandlers.Contains(handlerAttr.Handler)) {
                         activeHandlers.Add(handlerAttr.Handler);
                     }
 

@@ -3,12 +3,30 @@
     <PropertyGroup>
         <TargetFrameworks>net10.0;net9.0;net8.0;</TargetFrameworks>
 
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageId>HappyEntity.Refit.Composite</PackageId>
         <Title>HappyEntity.Refit.Composite</Title>
+
+        <IsAotCompatible>true</IsAotCompatible>
+        <PublishAotSupported>true</PublishAotSupported>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="Refit.HttpClientFactory"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Refit.Composite.SourceGenerator\Refit.Composite.SourceGenerator.csproj"
+                          OutputItemType="Analyzer"
+                          ReferenceOutputAssembly="false"
+                          PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup Label="Package">
+        <None Include="..\Refit.Composite.SourceGenerator\bin\$(Configuration)\netstandard2.0\Refit.Composite.SourceGenerator.dll"
+              PackagePath="analyzers\dotnet\roslyn5.0\cs"
+              Pack="true"
+              Visible="false" />
     </ItemGroup>
 
     <ItemGroup>

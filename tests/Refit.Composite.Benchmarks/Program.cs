@@ -23,15 +23,15 @@ public class ApiResolveBenchmark
     public void Setup()
     {
         var services = new ServiceCollection();
-        
-        services.AddRefitClient<IMockApi>().ConfigureHttpClient(c => c.BaseAddress = new Uri("https://localhost"));
-        
+
+        services.AddTransient<IMockApi>(_ => new FakeMockApi());
+
         services.AddRefitComposite<IBenchmarkComposite>("https://localhost");
-        
+
         services.AddScoped<OldRefitApi>();
 
         _serviceProvider = services.BuildServiceProvider();
-        
+
         _compositeApi = _serviceProvider.GetRequiredService<IBenchmarkComposite>();
         _oldClassApi = _serviceProvider.GetRequiredService<OldRefitApi>();
     }
@@ -49,7 +49,7 @@ public class ApiResolveBenchmark
     }
 
     [Benchmark]
-    public IMockApi ProxyWithConcurrentDictionary_Resolve()
+    public IMockApi SourceGenerator_LockFree_ZeroAlloc_Resolve()
     {
         return _compositeApi.Mock;
     }
@@ -62,14 +62,20 @@ public interface IBenchmarkComposite : IRefitComposite
 
 public interface IMockApi
 {
-    [Get("/")] Task Get();
+    [Get("/")]
+    Task Get();
+}
+
+public class FakeMockApi : IMockApi
+{
+    public Task Get() => Task.CompletedTask;
 }
 
 public class OldRefitApi(IServiceProvider serviceProvider)
 {
     private readonly Dictionary<Type, object> _apis = new();
 
-    public IMockApi Mock 
+    public IMockApi Mock
     {
         get
         {
@@ -80,3 +86,5 @@ public class OldRefitApi(IServiceProvider serviceProvider)
         }
     }
 }
+
+
