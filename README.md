@@ -82,7 +82,7 @@ Consume the unified interface through standard constructor injection like any or
 ```csharp
 var composite = provider.GetRequiredService<IMyCompositeApi>();
 
-// Seamless execution over high-performance thread-safe proxy cache
+// Seamless execution over high-performance lock-free hardware cache
 string postData = await composite.Test.GetPostAsync();
 Console.WriteLine(postData);
 ```
