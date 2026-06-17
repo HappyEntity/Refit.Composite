@@ -94,6 +94,7 @@ public class CompositeApiGenerator : IIncrementalGenerator
         sb.AppendLine("    {");
         sb.AppendLine("        _serviceProvider = serviceProvider;");
         sb.AppendLine("    }");
+        sb.AppendLine("}");
 
         return sb.ToString();
     }
