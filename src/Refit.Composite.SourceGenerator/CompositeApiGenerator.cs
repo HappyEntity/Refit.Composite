@@ -82,19 +82,18 @@ public class CompositeApiGenerator : IIncrementalGenerator
             sb.AppendLine($"            if (_cached{prop.Name} is {typeName} initialized) return initialized;");
             sb.AppendLine();
             sb.AppendLine($"            var service = _serviceProvider.GetRequiredService<{typeName}>();");
-            sb.AppendLine($"            System.Threading.Interlocked.CompareExchange(ref _cached{prop.Name}, service, null);");
+            sb.AppendLine($"            global::System.Threading.Interlocked.CompareExchange(ref _cached{prop.Name}, service, null);");
             sb.AppendLine($"            return ({typeName})_cached{prop.Name}!;");
             sb.AppendLine("        }");
             sb.AppendLine("    }");
             sb.AppendLine();
         }
 
-        sb.AppendLine("    [System.Diagnostics.CodeAnalysis.DynamicDependency(System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, typeof(System.Object))]");
-        sb.AppendLine($"    public {className}(System.IServiceProvider serviceProvider)");
+        sb.AppendLine("    [global::System.Diagnostics.CodeAnalysis.DynamicDependency(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, typeof(global::System.Object))]");
+        sb.AppendLine($"    public {className}(global::System.IServiceProvider serviceProvider)");
         sb.AppendLine("    {");
         sb.AppendLine("        _serviceProvider = serviceProvider;");
         sb.AppendLine("    }");
-        sb.AppendLine("}");
 
         return sb.ToString();
     }
