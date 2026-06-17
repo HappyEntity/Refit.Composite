@@ -2,10 +2,11 @@
 
     <PropertyGroup>
         <TargetFrameworks>net10.0;net9.0;net8.0;</TargetFrameworks>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
+
+        <PackageId>HappyEntity.Refit.Composite</PackageId>
+        <Title>HappyEntity.Refit.Composite</Title>
     </PropertyGroup>
-    
+
     <ItemGroup>
         <PackageReference Include="Refit.HttpClientFactory"/>
     </ItemGroup>

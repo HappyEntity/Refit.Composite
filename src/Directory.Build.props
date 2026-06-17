@@ -1,0 +1,23 @@
+<Project>
+    <Import Project="$([MsBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+    <PropertyGroup>
+        <Authors>Happy Entity</Authors>
+        <Copyright>Copyright (c) 2026 Happy Entity</Copyright>
+
+        <PackageLicenseFile>LICENSE</PackageLicenseFile>
+
+        <PackageProjectUrl>https://github.com/HappyEntity/Refit.Composite</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/HappyEntity/Refit.Composite</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageTags>Refit;HttpClient;Rest;API;Composite;Wrapper</PackageTags>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)../README.md" Pack="true" PackagePath="\"/>
+        <None Include="$(MSBuildThisFileDirectory)../LICENSE" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+</Project>

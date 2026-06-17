@@ -14,7 +14,7 @@ A lightweight, high-performance architectural wrapper for [Refit](https://github
 Install the package via NuGet Package Manager CLI:
 
 ```bash
-dotnet add package Refit.Composite
+dotnet add package HappyEntity.Refit.Composite
 ```
 
 ## Quick Start
@@ -68,7 +68,7 @@ services.AddTransient<AntiforgeryHandler>();
 services.AddTransient<CustomLoggingHandler>();
 
 // Boot up the composite workspace
-services.AddRefitComposite<IMyCompositeApi>("https://typicode.com");
+services.AddRefitComposite<IMyCompositeApi>("https://jsonplaceholder.typicode.com/");
 
 var provider = services.BuildServiceProvider();
 ```
