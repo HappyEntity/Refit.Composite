@@ -4,11 +4,11 @@ A lightweight, high-performance architectural wrapper for [Refit](https://github
 
 ## Features
 
-- 🏎️ **High Performance**: Compile-time Source Generator orchestration powered by a hardware-level Lock-Free cache with absolutely zero allocations on subsequent property resolutions.
-- 🧩 **Clean Architecture**: Group isolated Refit interfaces into single unified contracts without boilerplate abstract classes or manual dependency factories.
-- 🛡️ **Declarative Pipeline Control**: Manage individual `DelegatingHandler` chains using native C# 12+ generic attributes directly over API definitions.
-- 🚀 **Native AOT & Trimming**: 100% compatible with Ahead-Of-Time compilation out of the box, producing zero runtime compilation or formatting warnings.
-- 🪵 **Built-in Quality of Life**: Seamless, out-of-the-box integration with status-code-aware HTTP logging and automated exception mapping handlers.
+- 🏎️ **High Performance:** Compile-time Source Generator orchestration powered by a hardware-level Lock-Free cache with absolutely zero allocations on subsequent property resolutions.
+- 🧩 **Clean Architecture:** Group isolated Refit interfaces into single unified contracts without boilerplate abstract classes or manual dependency factories.
+- 🛡️ **Declarative Pipeline Control:** Manage individual `DelegatingHandler` chains using native C# 12+ generic attributes directly over API definitions.
+- 🚀 **Native AOT & Blazor WASM:** 100% compatible with Ahead-Of-Time compilation and browser environments out of the box, producing zero runtime compilation or formatting warnings.
+- 🪵 **Built-in Quality of Life:** Seamless, out-of-the-box integration with status-code-aware HTTP logging and automated exception mapping handlers.
 
 
 ## Installation

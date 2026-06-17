@@ -12,6 +12,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <SupportedPlatform Include="browser" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="Refit.HttpClientFactory"/>
     </ItemGroup>
 

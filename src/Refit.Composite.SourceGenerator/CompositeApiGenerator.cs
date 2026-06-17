@@ -67,23 +67,31 @@ public class CompositeApiGenerator : IIncrementalGenerator
         sb.AppendLine("    private readonly System.IServiceProvider _serviceProvider;");
         sb.AppendLine();
 
+        sb.AppendLine("    private readonly object _lock = new object();");
         foreach (var prop in properties) {
             sb.AppendLine($"    private object? _cached{prop.Name};");
         }
 
         sb.AppendLine();
 
-        foreach (var prop in properties) {
+        foreach (var prop in properties)
+        {
             var typeName = prop.Type.ToDisplayString(format);
             sb.AppendLine($"    public {typeName} {prop.Name}");
             sb.AppendLine("    {");
             sb.AppendLine("        get");
             sb.AppendLine("        {");
-            sb.AppendLine($"            if (_cached{prop.Name} is {typeName} initialized) return initialized;");
+            sb.AppendLine($"            if (global::System.Threading.Volatile.Read(ref _cached{prop.Name}) is {typeName} initialized) return initialized;");
             sb.AppendLine();
-            sb.AppendLine($"            var service = _serviceProvider.GetRequiredService<{typeName}>();");
-            sb.AppendLine($"            global::System.Threading.Interlocked.CompareExchange(ref _cached{prop.Name}, service, null);");
-            sb.AppendLine($"            return ({typeName})_cached{prop.Name}!;");
+            sb.AppendLine("            lock (_lock)");
+            sb.AppendLine("            {");
+            sb.AppendLine($"                if (_cached{prop.Name} == null)");
+            sb.AppendLine("                {");
+            sb.AppendLine($"                    var service = _serviceProvider.GetRequiredService<{typeName}>();");
+            sb.AppendLine($"                    global::System.Threading.Volatile.Write(ref _cached{prop.Name}, service);");
+            sb.AppendLine("                }");
+            sb.AppendLine($"                return ({typeName})_cached{prop.Name}!;");
+            sb.AppendLine("            }");
             sb.AppendLine("        }");
             sb.AppendLine("    }");
             sb.AppendLine();
