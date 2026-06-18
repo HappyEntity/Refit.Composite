@@ -16,7 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Refit.HttpClientFactory"/>
+        <PackageReference Include="Refit.HttpClientFactory" />
     </ItemGroup>
 
     <ItemGroup>

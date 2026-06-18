@@ -10,5 +10,7 @@
         <ProjectReference Include="$(MSBuildThisFileDirectory)..\src\Refit.Composite.SourceGenerator\Refit.Composite.SourceGenerator.csproj"
                           OutputItemType="Analyzer"
                           ReferenceOutputAssembly="false"/>
+
+        <PackageReference Include="Refit.HttpClientFactory" VersionOverride="11.*" />
     </ItemGroup>
 </Project>
