@@ -1,7 +1,9 @@
-﻿namespace Refit.Composite.Attributes;
+﻿using System.Net.Http;
+
+namespace Refit.Composite.Attributes;
 
 /// <summary>
-/// Excludes a specific <see cref="DelegatingHandler"/> from the current HttpClient pipeline 
+/// Excludes a specific <see cref="DelegatingHandler"/> from the current HttpClient pipeline
 /// if it was previously added by global configuration or prior attributes.
 /// </summary>
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
@@ -23,12 +25,12 @@ public class ApiIgnoreHandlerAttribute : Attribute
 }
 
 /// <summary>
-/// Excludes a specific <see cref="DelegatingHandler"/> from the current HttpClient pipeline 
+/// Excludes a specific <see cref="DelegatingHandler"/> from the current HttpClient pipeline
 /// if it was previously added by global configuration or prior attributes.
 /// </summary>
 /// <typeparam name="THandler">The type of the handler to exclude.</typeparam>
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = true)]
-public class ApiIgnoreHandlerAttribute<THandler> : ApiIgnoreHandlerAttribute 
+public class ApiIgnoreHandlerAttribute<THandler> : ApiIgnoreHandlerAttribute
     where THandler : DelegatingHandler
 {
     /// <summary>

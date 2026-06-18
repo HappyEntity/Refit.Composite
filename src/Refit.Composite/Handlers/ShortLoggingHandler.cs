@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Net;
+using System.Net.Http;
 using Microsoft.Extensions.Logging;
 
 namespace Refit.Composite.Handlers;
@@ -12,9 +13,9 @@ public class ShortLoggingHandler(ILogger<ShortLoggingHandler> logger) : Delegati
 {
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
     {
-        var startTime = Stopwatch.GetTimestamp();
+        var sw = Stopwatch.StartNew();
         var response = await base.SendAsync(request, ct);
-        var elapsedMs = Stopwatch.GetElapsedTime(startTime).TotalMilliseconds;
+        sw.Stop();
 
         var level = response.StatusCode switch
         {
@@ -24,7 +25,7 @@ public class ShortLoggingHandler(ILogger<ShortLoggingHandler> logger) : Delegati
         };
 
         logger.Log(level, "HTTP {Method} {Uri} responded {StatusCode} in {Elapsed:F2} ms",
-            request.Method, request.RequestUri, (int)response.StatusCode, elapsedMs);
+            request.Method, request.RequestUri, (int)response.StatusCode, sw.Elapsed.TotalMilliseconds);
 
         return response;
     }

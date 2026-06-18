@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System.Net.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Refit.Composite.Attributes;
 using Refit.Composite.Handlers;
 
@@ -20,13 +21,13 @@ public class PipelineBuilderTests
         [ApiIgnoreHandler<ShortLoggingHandler>]
         IMockApi IgnoredLoggerPipeline { get; }
     }
-    
+
     public interface IOldStyleAttributeComposite : IRefitComposite
     {
         [ApiHandler(typeof(HandlerA))]
         IMockApi OldStyle { get; }
     }
-    
+
     public interface INewStyleAttributeComposite : IRefitComposite
     {
         [ApiHandler<HandlerA>]
@@ -72,7 +73,11 @@ public class PipelineBuilderTests
         Assert.Contains(typeof(HandlerA), result);
     }
 
+#if NET462
+    [Fact(Skip = "Generic attributes are not supported by .NET Framework 4.6.2 runtime reflection.")]
+#else
     [Fact]
+#endif
     public void BuildPipeline_WithApiIgnoreAllHandlers_ShouldResetAndApplyOnlySubsequentHandlers()
     {
         // Arrange
@@ -86,7 +91,11 @@ public class PipelineBuilderTests
         Assert.Equal(typeof(HandlerB), expectedSingleType);
     }
 
+#if NET462
+    [Fact(Skip = "Generic attributes are not supported by .NET Framework 4.6.2 runtime reflection.")]
+#else
     [Fact]
+#endif
     public void BuildPipeline_WithApiIgnoreHandler_ShouldSuccessfullyRemoveSpecificHandler()
     {
         // Arrange
@@ -101,7 +110,7 @@ public class PipelineBuilderTests
         Assert.Contains(typeof(HandlerA), result);
         Assert.DoesNotContain(typeof(ShortLoggingHandler), result);
     }
-    
+
     [Fact]
     public void BuildPipeline_WithOldStyleTypeofAttribute_ShouldSuccessfullyExtractHandler()
     {
@@ -117,7 +126,11 @@ public class PipelineBuilderTests
         Assert.Equal(typeof(HandlerA), expectedHandler);
     }
 
+#if NET462
+    [Fact(Skip = "Generic attributes are not supported by .NET Framework 4.6.2 runtime reflection.")]
+#else
     [Fact]
+#endif
     public void BuildPipeline_WithNewStyleGenericAttribute_ShouldSuccessfullyExtractHandler()
     {
         // Arrange

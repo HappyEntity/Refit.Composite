@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http;
 
 namespace Refit.Composite.Handlers;
 

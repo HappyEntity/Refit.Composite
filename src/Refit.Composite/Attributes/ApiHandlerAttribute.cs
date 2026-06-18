@@ -1,4 +1,6 @@
-﻿namespace Refit.Composite.Attributes;
+﻿using System.Net.Http;
+
+namespace Refit.Composite.Attributes;
 
 /// <summary>
 /// Registers a custom <see cref="DelegatingHandler"/> to be executed in the HttpClient pipeline.
@@ -33,7 +35,7 @@ public class ApiHandlerAttribute : Attribute
 /// </summary>
 /// <typeparam name="THandler">The type of the handler that inherits from <see cref="DelegatingHandler"/>.</typeparam>
 [AttributeUsage(AttributeTargets.Interface | AttributeTargets.Property, AllowMultiple = true)]
-public class ApiHandlerAttribute<THandler> : ApiHandlerAttribute 
+public class ApiHandlerAttribute<THandler> : ApiHandlerAttribute
     where THandler : DelegatingHandler
 {
     /// <summary>

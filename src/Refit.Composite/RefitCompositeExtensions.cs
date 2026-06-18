@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Net.Http;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Refit;
@@ -27,15 +28,27 @@ public static class RefitCompositeExtensions
     /// <exception cref="ArgumentException">Thrown when <paramref name="baseApi"/> is null or empty.</exception>
     /// <exception cref="UriFormatException">Thrown when <paramref name="baseApi"/> is not a valid URI.</exception>
     /// <exception cref="InvalidDataException">Thrown when the composite interface contains duplicate API definitions or invalid handler registrations.</exception>
+#if NET5_0_OR_GREATER || NETCOREAPP3_0_OR_GREATER
     [RequiresUnreferencedCode("Scans composite API interface properties via reflection to configure HttpClient pipelines.")]
+#endif
     public static IServiceCollection AddRefitComposite<
+#if NET5_0_OR_GREATER || NETCOREAPP3_0_OR_GREATER
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)]
+#endif
         TApi>(
         this IServiceCollection services,
         string baseApi, RefitSettings? settings = null, Action<IHttpClientBuilder>? configure = null)
         where TApi : class, IRefitComposite
     {
+#if NET7_0_OR_GREATER
         ArgumentException.ThrowIfNullOrEmpty(baseApi);
+#else
+        if (string.IsNullOrEmpty(baseApi))
+        {
+            throw new ArgumentException("The base API URL cannot be null or empty.", nameof(baseApi));
+        }
+#endif
+
         return services.AddRefitComposite<TApi>(new Uri(baseApi), settings, configure);
     }
 
@@ -51,9 +64,14 @@ public static class RefitCompositeExtensions
     /// <param name="configure">An optional delegate to further configure the underlying <see cref="IHttpClientBuilder"/> for each registered API client.</param>
     /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
     /// <exception cref="InvalidDataException">Thrown when the composite interface contains duplicate API definitions or invalid handler registrations.</exception>
+#if NET5_0_OR_GREATER || NETCOREAPP3_0_OR_GREATER
     [RequiresUnreferencedCode("Scans composite API interface properties via reflection to configure HttpClient pipelines.")]
+#endif
     public static IServiceCollection AddRefitComposite<
-        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)] TApi>(
+#if NET5_0_OR_GREATER || NETCOREAPP3_0_OR_GREATER
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)]
+#endif
+        TApi>(
         this IServiceCollection services,
         Uri baseApi, RefitSettings? settings = null, Action<IHttpClientBuilder>? configure = null)
         where TApi : class, IRefitComposite

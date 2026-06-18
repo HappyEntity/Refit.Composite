@@ -97,11 +97,14 @@ public class CompositeApiGenerator : IIncrementalGenerator
             sb.AppendLine();
         }
 
+        sb.AppendLine("#if NET5_0_OR_GREATER || NETCOREAPP3_0_OR_GREATER");
         sb.AppendLine("    [global::System.Diagnostics.CodeAnalysis.DynamicDependency(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, typeof(global::System.Object))]");
+        sb.AppendLine("#endif");
         sb.AppendLine($"    public {className}(global::System.IServiceProvider serviceProvider)");
         sb.AppendLine("    {");
         sb.AppendLine("        _serviceProvider = serviceProvider;");
         sb.AppendLine("    }");
+
         sb.AppendLine("}");
 
         return sb.ToString();

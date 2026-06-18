@@ -1,0 +1,27 @@
+﻿@page "/"
+@using System.Text.Json
+
+<PageTitle>Home</PageTitle>
+
+<h1>Test Composite</h1>
+
+Response:
+<pre><code>@_response</code></pre>
+
+@code {
+    [Inject] public ITestComposite TestComposite { get; set; } = null!;
+
+    private string _response = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var rawJson = await TestComposite.Test.Test();
+
+        var jsonElement = JsonSerializer.Deserialize<JsonElement>(rawJson);
+        _response = JsonSerializer.Serialize(jsonElement, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        });
+    }
+
+}
