@@ -2,8 +2,11 @@
 
     <PropertyGroup>
         <TargetFramework>net10.0</TargetFramework>
-        <RunAOTCompilation>true</RunAOTCompilation>
         <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(GITHUB_ACTIONS)' != 'true'">
+        <RunAOTCompilation>true</RunAOTCompilation>
     </PropertyGroup>
 
     <ItemGroup>
