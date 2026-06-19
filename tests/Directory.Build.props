@@ -2,6 +2,7 @@
     <Import Project="$([MsBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))"/>
 
     <PropertyGroup>
+        <IsPackable>false</IsPackable>
         <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
         <CompilerGeneratedFilesOutputPath>obj/generated</CompilerGeneratedFilesOutputPath>
     </PropertyGroup>
