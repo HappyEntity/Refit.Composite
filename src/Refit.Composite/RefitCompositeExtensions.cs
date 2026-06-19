@@ -80,7 +80,6 @@ public static class RefitCompositeExtensions
 
         ValidateCompositeInterface<TApi>(properties);
 
-        services.TryAddTransient<ErrorHandlingHandler>();
         services.TryAddTransient<ShortLoggingHandler>();
 
         var globalHandlers = GetGlobalHandlers(typeof(TApi));
@@ -92,7 +91,6 @@ public static class RefitCompositeExtensions
         var interfaceType = typeof(TApi);
         var expectedClassName = interfaceType.Name.Substring(1) + "Generated";
 
-        // Ищем класс по имени среди всех типов сборки, где объявлен интерфейс пользователя
         var generatedType = interfaceType.Assembly.GetTypes()
             .FirstOrDefault(t => t.Name == expectedClassName && typeof(TApi).IsAssignableFrom(t));
 
@@ -102,10 +100,7 @@ public static class RefitCompositeExtensions
                 $"for interface '{interfaceType.Name}'. Please ensure the project has been built successfully.");
         }
 
-        // Регистрируем найденный сгенерированный класс в DI
         services.AddScoped(interfaceType, generatedType);
-
-        //services.AddScoped(RefitCompositeProxy.Create<TApi>);
 
         return services;
     }
@@ -125,7 +120,6 @@ public static class RefitCompositeExtensions
             .Select(x => x.Handler)
             .ToList();
 
-        handlers.Add(typeof(ErrorHandlingHandler));
         handlers.Add(typeof(ShortLoggingHandler));
 
         return handlers;

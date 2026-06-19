@@ -52,7 +52,6 @@ public class PipelineBuilderTests
 
     private readonly List<Type> _stubGlobalHandlers = new()
     {
-        typeof(ErrorHandlingHandler),
         typeof(ShortLoggingHandler),
         typeof(HandlerA)
     };
@@ -68,7 +67,6 @@ public class PipelineBuilderTests
 
         // Assert
         Assert.Equal(3, result.Count);
-        Assert.Contains(typeof(ErrorHandlingHandler), result);
         Assert.Contains(typeof(ShortLoggingHandler), result);
         Assert.Contains(typeof(HandlerA), result);
     }
@@ -106,7 +104,6 @@ public class PipelineBuilderTests
         var result = RefitCompositeExtensions.BuildPipelineForProperty(property, _stubGlobalHandlers);
 
         // Assert
-        Assert.Contains(typeof(ErrorHandlingHandler), result);
         Assert.Contains(typeof(HandlerA), result);
         Assert.DoesNotContain(typeof(ShortLoggingHandler), result);
     }

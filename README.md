@@ -8,8 +8,7 @@ A lightweight, high-performance architectural wrapper for [Refit](https://github
 - 🧩 **Clean Architecture:** Group isolated Refit interfaces into single unified contracts without boilerplate abstract classes or manual dependency factories.
 - 🛡️ **Declarative Pipeline Control:** Manage individual `DelegatingHandler` chains using native C# 12+ generic attributes directly over API definitions.
 - 🚀 **Native AOT & Blazor WASM:** 100% compatible with Ahead-Of-Time compilation and browser environments out of the box, producing zero runtime compilation or formatting warnings.
-- 🪵 **Built-in Quality of Life:** Seamless, out-of-the-box integration with status-code-aware HTTP logging and automated exception mapping handlers.
-
+- 🪵 **Built-in Quality of Life:** Seamless, out-of-the-box integration with high-speed, status-code-aware HTTP logging handlers.
 
 ## Installation
 
@@ -34,7 +33,7 @@ using Refit.Composite.Attributes;
 [ApiHandler<AntiforgeryHandler>]
 public interface IMyCompositeApi : IRefitComposite
 {
-    // Inherits global handlers + built-in ErrorHandling/ShortLogging
+    // Inherits global handlers + built-in ShortLoggingHandler
     ITestApi Test { get; }
 
     // Overrides pipeline: resets all accumulated handlers and applies ONLY CustomLoggingHandler

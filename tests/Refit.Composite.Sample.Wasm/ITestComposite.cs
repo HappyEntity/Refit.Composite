@@ -11,7 +11,7 @@ public interface ITestComposite : IRefitComposite
 public interface ITest
 {
     [Get("/posts/1")]
-    Task<string> Test();
+    Task<IApiResponse<string>> Test();
 }
 
 public class AntiforgeryHandler : DelegatingHandler

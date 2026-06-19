@@ -6,22 +6,59 @@
 <h1>Test Composite</h1>
 
 Response:
-<pre><code>@_response</code></pre>
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <pre><code>Error: @_error</code></pre>
+}
+else if (string.IsNullOrWhiteSpace(_response))
+{
+    <pre><code>Loading...</code></pre>
+}
+else
+{
+    <pre><code>@_response</code></pre>
+}
+
+<button @onclick="Test">Reload</button>
 
 @code {
     [Inject] public ITestComposite TestComposite { get; set; } = null!;
 
     private string _response = string.Empty;
+    private string _error = string.Empty;
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync()
     {
-        var rawJson = await TestComposite.Test.Test();
+        return Test();
+    }
 
-        var jsonElement = JsonSerializer.Deserialize<JsonElement>(rawJson);
-        _response = JsonSerializer.Serialize(jsonElement, new JsonSerializerOptions
+    private async Task Test()
+    {
+        _response = string.Empty;
+        _error = string.Empty;
+
+        var apiResponse = await TestComposite.Test.Test();
+
+        if (apiResponse.IsSuccessful)
         {
-            WriteIndented = true
-        });
+            var jsonElement = JsonSerializer.Deserialize<JsonElement>(apiResponse.Content);
+            _response = JsonSerializer.Serialize(jsonElement, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+        }
+        else
+        {
+            _error = apiResponse.Error switch
+            {
+                ValidationApiException vae => vae.Content != null
+                    ? $"{vae.Content.Title}. {vae.Content.Title}"
+                    : vae.Message,
+                ApiRequestException are => $"{are.Message}",
+                ApiException ae => ae.Message,
+                _ => apiResponse.Error.Message
+            };
+        }
     }
 
 }
