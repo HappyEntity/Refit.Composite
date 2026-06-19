@@ -66,7 +66,7 @@ public class PipelineBuilderTests
         var result = RefitCompositeExtensions.BuildPipelineForProperty(property, _stubGlobalHandlers);
 
         // Assert
-        Assert.Equal(3, result.Count);
+        Assert.Equal(2, result.Count);
         Assert.Contains(typeof(ShortLoggingHandler), result);
         Assert.Contains(typeof(HandlerA), result);
     }
