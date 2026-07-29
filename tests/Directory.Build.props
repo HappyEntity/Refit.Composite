@@ -12,6 +12,6 @@
                           OutputItemType="Analyzer"
                           ReferenceOutputAssembly="false"/>
 
-        <PackageReference Include="Refit.HttpClientFactory" VersionOverride="11.*" />
+        <PackageReference Include="Refit.HttpClientFactory" VersionOverride="13.*" />
     </ItemGroup>
 </Project>
