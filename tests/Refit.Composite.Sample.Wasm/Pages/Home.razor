@@ -39,7 +39,7 @@ else
 
         var apiResponse = await TestComposite.Test.Test();
 
-        if (apiResponse.IsSuccessful)
+        if (apiResponse.IsSuccessfulWithContent)
         {
             var jsonElement = JsonSerializer.Deserialize<JsonElement>(apiResponse.Content);
             _response = JsonSerializer.Serialize(jsonElement, new JsonSerializerOptions
@@ -56,7 +56,7 @@ else
                     : vae.Message,
                 ApiRequestException are => $"{are.Message}",
                 ApiException ae => ae.Message,
-                _ => apiResponse.Error.Message
+                _ => apiResponse.Error?.Message ?? "Unknown error"
             };
         }
     }
