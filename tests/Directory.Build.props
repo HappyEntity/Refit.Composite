@@ -2,6 +2,7 @@
     <Import Project="$([MsBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))"/>
 
     <PropertyGroup>
+        <RefitTestVersion Condition="'$(RefitTestVersion)' == ''">16.*</RefitTestVersion>
         <IsPackable>false</IsPackable>
         <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
         <CompilerGeneratedFilesOutputPath>obj/generated</CompilerGeneratedFilesOutputPath>
@@ -12,6 +13,7 @@
                           OutputItemType="Analyzer"
                           ReferenceOutputAssembly="false"/>
 
-        <PackageReference Include="Refit.HttpClientFactory" VersionOverride="13.*" />
+        <!-- CI also runs the tests against the lowest supported Refit: -p:RefitTestVersion=15.0.0 -->
+        <PackageReference Include="Refit.HttpClientFactory" VersionOverride="$(RefitTestVersion)" />
     </ItemGroup>
 </Project>

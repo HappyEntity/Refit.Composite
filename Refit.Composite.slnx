@@ -11,6 +11,7 @@
     <Project Path="tests/Refit.Composite.Benchmarks/Refit.Composite.Benchmarks.csproj" />
     <Project Path="tests/Refit.Composite.Sample.Wasm/Refit.Composite.Sample.Wasm.csproj" />
     <Project Path="tests/Refit.Composite.Sample/Refit.Composite.Sample.csproj" />
+    <Project Path="tests/Refit.Composite.SourceGenerator.Tests/Refit.Composite.SourceGenerator.Tests.csproj" />
     <Project Path="tests/Refit.Composite.Tests/Refit.Composite.Tests.csproj" />
   </Folder>
 </Solution>

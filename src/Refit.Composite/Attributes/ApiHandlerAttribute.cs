@@ -1,10 +1,11 @@
-﻿using System.Net.Http;
+using System.Net.Http;
 
 namespace Refit.Composite.Attributes;
 
 /// <summary>
 /// Registers a custom <see cref="DelegatingHandler"/> to be executed in the HttpClient pipeline.
 /// Can be applied globally to the interface or directly to specific API properties.
+/// The pipeline is resolved at compile time; handlers that are not yet registered in DI are added as transient services.
 /// </summary>
 [AttributeUsage(AttributeTargets.Interface | AttributeTargets.Property, AllowMultiple = true)]
 public class ApiHandlerAttribute : Attribute

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <!-- This project drives the generator itself, so it needs the assembly rather than the analyzer reference
+             inherited from tests/Directory.Build.props. -->
+        <ProjectReference Remove="$(MSBuildThisFileDirectory)..\..\src\Refit.Composite.SourceGenerator\Refit.Composite.SourceGenerator.csproj" />
+        <ProjectReference Include="..\..\src\Refit.Composite.SourceGenerator\Refit.Composite.SourceGenerator.csproj" />
+        <ProjectReference Include="..\..\src\Refit.Composite\Refit.Composite.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="xunit.v3" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Xunit"/>
+    </ItemGroup>
+
+</Project>

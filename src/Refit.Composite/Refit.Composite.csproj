@@ -1,15 +1,18 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks>net10.0;net9.0;net8.0;netstandard2.0;net462</TargetFrameworks>
+        <!-- Refit 12+ no longer ships netstandard2.0, so neither can this package. -->
+        <TargetFrameworks>net10.0;net9.0;net8.0;net462</TargetFrameworks>
 
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageId>HappyEntity.Refit.Composite</PackageId>
         <Title>HappyEntity.Refit.Composite</Title>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <Description>Groups Refit interfaces into Scoped composite services with declarative, compile-time DelegatingHandler pipelines. Reflection-free and Native AOT friendly.</Description>
+    </PropertyGroup>
 
+    <PropertyGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">
         <IsAotCompatible>true</IsAotCompatible>
-        <PublishAotSupported>true</PublishAotSupported>
-        <IsAotCompatible Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">true</IsAotCompatible>
     </PropertyGroup>
 
     <ItemGroup>
@@ -27,14 +30,25 @@
                           PrivateAssets="all" />
     </ItemGroup>
 
-    <ItemGroup Label="Package">
-        <None Include="..\Refit.Composite.SourceGenerator\bin\$(Configuration)\netstandard2.0\Refit.Composite.SourceGenerator.dll"
-              PackagePath="analyzers\dotnet\roslyn5.0\cs"
-              Pack="true"
-              Visible="false" />
-    </ItemGroup>
-
     <ItemGroup>
         <InternalsVisibleTo Include="Refit.Composite.Tests"/>
     </ItemGroup>
+
+    <!-- Ship the generator in the analyzer slot that matches the Roslyn version it is compiled against. -->
+    <PropertyGroup>
+        <BeforePack>$(BeforePack);IncludeSourceGeneratorInPackage</BeforePack>
+    </PropertyGroup>
+
+    <Target Name="IncludeSourceGeneratorInPackage">
+        <MSBuild Projects="..\Refit.Composite.SourceGenerator\Refit.Composite.SourceGenerator.csproj" Targets="GetTargetPath">
+            <Output TaskParameter="TargetOutputs" ItemName="_RefitCompositeGeneratorAssembly" />
+        </MSBuild>
+
+        <ItemGroup>
+            <None Include="@(_RefitCompositeGeneratorAssembly)"
+                  Pack="true"
+                  PackagePath="analyzers/dotnet/roslyn4.8/cs"
+                  Visible="false" />
+        </ItemGroup>
+    </Target>
 </Project>

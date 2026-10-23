@@ -6,6 +6,9 @@
     <ItemGroup>
         <PackageVersion Include="BenchmarkDotNet" Version="0.14.0"/>
 
+        <!-- Same Roslyn the generator is compiled against: the tests prove it runs on the oldest supported compiler. -->
+        <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0"/>
+
         <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/>
         <PackageVersion Include="coverlet.collector" Version="6.0.4"/>
 

@@ -2,7 +2,7 @@
 
 /// <summary>
 /// A marker interface required for all composite API definitions.
-/// Interfaces inheriting from this contract are scanned and integrated into a single unified service via dynamic proxying.
+/// The Refit.Composite source generator implements every interface inheriting from this contract at compile time.
 /// </summary>
 public interface IRefitComposite
 {

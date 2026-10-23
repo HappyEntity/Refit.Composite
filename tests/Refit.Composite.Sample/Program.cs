@@ -1,11 +1,10 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Refit;
 using Refit.Composite;
 using Refit.Composite.Attributes;
 
 var services = new ServiceCollection();
 
-services.AddTransient<AntiforgeryHandler>();
 services.AddRefitComposite<ITestComposite>("https://jsonplaceholder.typicode.com");
 
 var provider = services.BuildServiceProvider().CreateScope().ServiceProvider;

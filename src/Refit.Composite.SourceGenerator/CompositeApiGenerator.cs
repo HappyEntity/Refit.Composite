@@ -1,112 +1,415 @@
-﻿using System.Text;
+﻿using System.Collections.Immutable;
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
 namespace Refit.Composite.SourceGenerator;
 
-[Generator]
-public class CompositeApiGenerator : IIncrementalGenerator
+/// <summary>
+/// Implements every interface inheriting <c>Refit.Composite.IRefitComposite</c> and emits a registrar that wires its
+/// Refit clients and handler pipelines into DI without reflection.
+/// </summary>
+[Generator(LanguageNames.CSharp)]
+public sealed class CompositeApiGenerator : IIncrementalGenerator
 {
+    internal static class TrackingNames
+    {
+        public const string Composites = nameof(Composites);
+    }
+
+    private const string GeneratedNamespace = "Refit.Composite.Generated";
+    private const string RegistrationNamespace = "global::Refit.Composite.Registration";
+
+    private static readonly SymbolDisplayFormat TypeFormat = SymbolDisplayFormat.FullyQualifiedFormat
+        .AddMiscellaneousOptions(SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
+
+    private static readonly string GeneratorVersion = typeof(CompositeApiGenerator).Assembly.GetName().Version?.ToString() ?? "1.0.0.0";
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var interfaceDeclarations = context.SyntaxProvider
+        var composites = context.SyntaxProvider
             .CreateSyntaxProvider(
-                predicate: (syntaxNode, _) => syntaxNode is InterfaceDeclarationSyntax,
-                transform: (tuple, _) => {
-                    var interfaceSyntax = (InterfaceDeclarationSyntax)tuple.Node;
-                    if (tuple.SemanticModel.GetDeclaredSymbol(interfaceSyntax) is INamedTypeSymbol symbol) {
-                        if (symbol.AllInterfaces.Any(i => i.Name == "IRefitComposite")) {
-                            return symbol;
-                        }
-                    }
+                predicate: static (node, _) => node is InterfaceDeclarationSyntax { BaseList: not null },
+                transform: static (syntaxContext, ct) => Parse(syntaxContext, ct))
+            .Where(static model => model is not null)
+            .WithTrackingName(TrackingNames.Composites)
+            .Collect();
 
-                    return null;
-                })
-            .Where(x => x != null);
-
-        context.RegisterSourceOutput(interfaceDeclarations.Collect(), (spc, symbols) => {
-            foreach (var symbol in symbols.Distinct(SymbolEqualityComparer.Default)) {
-                if (symbol is not INamedTypeSymbol validSymbol) continue;
-
-                var generatedCode = GenerateExtensionClass(validSymbol);
-                spc.AddSource($"{symbol.Name}Registration.g.cs", SourceText.From(generatedCode, Encoding.UTF8));
+        context.RegisterSourceOutput(composites, static (spc, models) => {
+            foreach (var model in models) {
+                Emit(spc, model!);
             }
         });
     }
 
-    private static string GenerateExtensionClass(INamedTypeSymbol interfaceSymbol)
+    private static CompositeModel? Parse(GeneratorSyntaxContext syntaxContext, CancellationToken ct)
     {
-        var namespaceSymbol = interfaceSymbol.ContainingNamespace;
-        var isGlobalNamespace = namespaceSymbol == null || namespaceSymbol.IsGlobalNamespace;
-        var namespaceName = isGlobalNamespace ? "" : namespaceSymbol?.ToDisplayString();
+        var declaration = (InterfaceDeclarationSyntax)syntaxContext.Node;
+        if (syntaxContext.SemanticModel.GetDeclaredSymbol(declaration, ct) is not INamedTypeSymbol composite) return null;
 
-        var interfaceName = interfaceSymbol.Name;
-        var className = $"{interfaceName.Substring(1)}Generated";
+        var types = new KnownTypes(syntaxContext.SemanticModel.Compilation);
+        if (types.Composite is null || !composite.AllInterfaces.Contains(types.Composite, SymbolEqualityComparer.Default)) return null;
 
-        var properties = interfaceSymbol.GetMembers()
-            .OfType<IPropertySymbol>()
-            .Where(p => !p.IsWriteOnly)
-            .ToList();
+        // A partial interface is visited once per declaration; only the first one produces the model.
+        var references = composite.DeclaringSyntaxReferences;
+        if (references.Length > 1 && references[0].GetSyntax(ct) != declaration) return null;
 
-        var format = SymbolDisplayFormat.FullyQualifiedFormat;
+        return new CompositeParser(composite, types, ct).Parse();
+    }
+
+    private static void Emit(SourceProductionContext context, CompositeModel model)
+    {
+        var hasErrors = false;
+        foreach (var diagnostic in model.Diagnostics) {
+            context.ReportDiagnostic(diagnostic.ToDiagnostic());
+            hasErrors |= diagnostic.Descriptor.DefaultSeverity == DiagnosticSeverity.Error;
+        }
+
+        if (hasErrors) return;
+
+        context.AddSource($"{model.GeneratedName}.g.cs", SourceText.From(Render(model), Encoding.UTF8));
+    }
+
+    private static string Render(CompositeModel model)
+    {
+        var implementation = model.GeneratedName;
+        var registrar = model.GeneratedName + "_Registrar";
+        var composite = model.FullyQualifiedName;
 
         var sb = new StringBuilder();
         sb.AppendLine("// <auto-generated />");
         sb.AppendLine("#nullable enable");
-        sb.AppendLine("using Microsoft.Extensions.DependencyInjection;");
-        sb.AppendLine("using System.Threading;");
-        if (!isGlobalNamespace) {
-            sb.AppendLine($"namespace {namespaceName};");
-            sb.AppendLine();
-        }
-
-        var fullInterfaceName = interfaceSymbol.ToDisplayString(format);
-        sb.AppendLine($"public sealed class {className} : {fullInterfaceName}");
+        sb.AppendLine();
+        sb.AppendLine($"[assembly: {RegistrationNamespace}.RefitCompositeRegistrationAttribute(typeof({composite}), typeof(global::{GeneratedNamespace}.{registrar}))]");
+        sb.AppendLine();
+        sb.AppendLine($"namespace {GeneratedNamespace}");
         sb.AppendLine("{");
-        sb.AppendLine("    private readonly System.IServiceProvider _serviceProvider;");
-        sb.AppendLine();
 
-        sb.AppendLine("    private readonly object _lock = new object();");
-        foreach (var prop in properties) {
-            sb.AppendLine($"    private object? _cached{prop.Name};");
-        }
-
-        sb.AppendLine();
-
-        foreach (var prop in properties)
-        {
-            var typeName = prop.Type.ToDisplayString(format);
-            sb.AppendLine($"    public {typeName} {prop.Name}");
-            sb.AppendLine("    {");
-            sb.AppendLine("        get");
-            sb.AppendLine("        {");
-            sb.AppendLine($"            if (global::System.Threading.Volatile.Read(ref _cached{prop.Name}) is {typeName} initialized) return initialized;");
-            sb.AppendLine();
-            sb.AppendLine("            lock (_lock)");
-            sb.AppendLine("            {");
-            sb.AppendLine($"                if (_cached{prop.Name} == null)");
-            sb.AppendLine("                {");
-            sb.AppendLine($"                    var service = _serviceProvider.GetRequiredService<{typeName}>();");
-            sb.AppendLine($"                    global::System.Threading.Volatile.Write(ref _cached{prop.Name}, service);");
-            sb.AppendLine("                }");
-            sb.AppendLine($"                return ({typeName})_cached{prop.Name}!;");
-            sb.AppendLine("            }");
-            sb.AppendLine("        }");
-            sb.AppendLine("    }");
-            sb.AppendLine();
-        }
-
-        sb.AppendLine("#if NET5_0_OR_GREATER || NETCOREAPP3_0_OR_GREATER");
-        sb.AppendLine("    [global::System.Diagnostics.CodeAnalysis.DynamicDependency(global::System.Diagnostics.CodeAnalysis.DynamicallyAccessedMemberTypes.All, typeof(global::System.Object))]");
-        sb.AppendLine("#endif");
-        sb.AppendLine($"    public {className}(global::System.IServiceProvider serviceProvider)");
+        AppendTypeAttributes(sb);
+        sb.AppendLine($"    internal sealed class {implementation} : {composite}");
         sb.AppendLine("    {");
-        sb.AppendLine("        _serviceProvider = serviceProvider;");
-        sb.AppendLine("    }");
+        sb.AppendLine("        private readonly global::System.IServiceProvider _serviceProvider;");
+        for (var i = 0; i < model.Clients.Count; i++) {
+            sb.AppendLine($"        private {model.Clients[i].Type}? _client{i};");
+        }
 
+        sb.AppendLine();
+        sb.AppendLine($"        public {implementation}(global::System.IServiceProvider serviceProvider)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            _serviceProvider = serviceProvider;");
+        sb.AppendLine("        }");
+
+        foreach (var property in model.Properties) {
+            sb.AppendLine();
+            sb.AppendLine($"        {property.ClientType} {property.DeclaringInterface}.{property.Name}");
+            sb.AppendLine($"            => {RegistrationNamespace}.RefitCompositeRegistrationContext.GetClient(ref _client{property.ClientIndex}, _serviceProvider, typeof({composite}));");
+        }
+
+        sb.AppendLine("    }");
+        sb.AppendLine();
+
+        AppendTypeAttributes(sb);
+        sb.AppendLine($"    internal sealed class {registrar} : {RegistrationNamespace}.IRefitCompositeRegistrar");
+        sb.AppendLine("    {");
+        sb.AppendLine($"        public void Register({RegistrationNamespace}.RefitCompositeRegistrationContext context)");
+        sb.AppendLine("        {");
+
+        foreach (var handler in model.Handlers) {
+            sb.AppendLine($"            context.AddHandler<{handler}>();");
+        }
+
+        foreach (var client in model.Clients) {
+            if (client.Pipeline.Count == 0) {
+                sb.AppendLine($"            context.AddClient<{client.Type}>(static _ => {{ }});");
+                continue;
+            }
+
+            sb.AppendLine($"            context.AddClient<{client.Type}>(static builder =>");
+            sb.AppendLine("            {");
+            foreach (var handler in client.Pipeline) {
+                sb.AppendLine($"                global::Microsoft.Extensions.DependencyInjection.HttpClientBuilderExtensions.AddHttpMessageHandler<{handler}>(builder);");
+            }
+
+            sb.AppendLine("            });");
+        }
+
+        sb.AppendLine($"            context.AddComposite<{composite}, global::{GeneratedNamespace}.{implementation}>();");
+        sb.AppendLine("        }");
+        sb.AppendLine("    }");
         sb.AppendLine("}");
 
         return sb.ToString();
+    }
+
+    private static void AppendTypeAttributes(StringBuilder sb)
+    {
+        sb.AppendLine($"    [global::System.CodeDom.Compiler.GeneratedCode(\"Refit.Composite.SourceGenerator\", \"{GeneratorVersion}\")]");
+        sb.AppendLine("    [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]");
+    }
+
+    private sealed class KnownTypes(Compilation compilation)
+    {
+        public INamedTypeSymbol? Composite { get; } = compilation.GetTypeByMetadataName("Refit.Composite.IRefitComposite");
+        public INamedTypeSymbol? Handler { get; } = compilation.GetTypeByMetadataName("Refit.Composite.Attributes.ApiHandlerAttribute");
+        public INamedTypeSymbol? GenericHandler { get; } = compilation.GetTypeByMetadataName("Refit.Composite.Attributes.ApiHandlerAttribute`1");
+        public INamedTypeSymbol? Ignore { get; } = compilation.GetTypeByMetadataName("Refit.Composite.Attributes.ApiIgnoreHandlerAttribute");
+        public INamedTypeSymbol? GenericIgnore { get; } = compilation.GetTypeByMetadataName("Refit.Composite.Attributes.ApiIgnoreHandlerAttribute`1");
+        public INamedTypeSymbol? IgnoreAll { get; } = compilation.GetTypeByMetadataName("Refit.Composite.Attributes.ApiIgnoreAllHandlersAttribute");
+        public INamedTypeSymbol? ShortLogging { get; } = compilation.GetTypeByMetadataName("Refit.Composite.Handlers.ShortLoggingHandler");
+        public INamedTypeSymbol? DelegatingHandler { get; } = compilation.GetTypeByMetadataName("System.Net.Http.DelegatingHandler");
+        public INamedTypeSymbol? HttpMethod { get; } = compilation.GetTypeByMetadataName("Refit.HttpMethodAttribute");
+        public Compilation Compilation { get; } = compilation;
+    }
+
+    private sealed class CompositeParser(INamedTypeSymbol composite, KnownTypes types, CancellationToken ct)
+    {
+        private readonly List<DiagnosticInfo> _diagnostics = new();
+        private readonly string _compositeName = composite.ToDisplayString();
+
+        public CompositeModel Parse()
+        {
+            var fullyQualifiedName = composite.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+
+            if (composite.IsGenericType) {
+                _diagnostics.Add(DiagnosticInfo.Create(Diagnostics.GenericComposite, composite, _compositeName));
+            }
+
+            CheckAccessible(composite, composite);
+
+            var globalPipeline = new List<ITypeSymbol>();
+            ApplyAttributes(composite.GetAttributes(), globalPipeline);
+            if (types.ShortLogging is not null) {
+                AddHandler(globalPipeline, types.ShortLogging);
+            }
+
+            var properties = new List<PropertyModel>();
+            var clients = new List<ClientModel>();
+            var clientIndexes = new Dictionary<ITypeSymbol, int>(SymbolEqualityComparer.Default);
+
+            var interfaces = new[] { composite }
+                .Concat(composite.AllInterfaces)
+                .Where(i => !SymbolEqualityComparer.Default.Equals(i, types.Composite));
+
+            foreach (var declaringInterface in interfaces) {
+                foreach (var member in declaringInterface.GetMembers()) {
+                    ct.ThrowIfCancellationRequested();
+
+                    if (!member.IsAbstract) continue;
+
+                    if (!TryGetClientProperty(member, out var property)) continue;
+
+                    var clientType = property.Type.WithNullableAnnotation(NullableAnnotation.NotAnnotated);
+
+                    if (clientIndexes.TryGetValue(clientType, out var existingIndex)) {
+                        // A property re-declared with `new` in a derived composite shares the client of the one it hides.
+                        if (properties.Any(p => p.ClientIndex == existingIndex && p.Name == property.Name)) {
+                            properties.Add(new PropertyModel(
+                                declaringInterface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                                property.Name,
+                                property.Type.ToDisplayString(TypeFormat),
+                                existingIndex));
+                        }
+                        else {
+                            _diagnostics.Add(DiagnosticInfo.Create(Diagnostics.DuplicateClient, property, _compositeName, clientType.ToDisplayString()));
+                        }
+
+                        continue;
+                    }
+
+                    CheckAccessible(clientType, property);
+                    CheckRefitMethods(clientType, property);
+
+                    var pipeline = new List<ITypeSymbol>(globalPipeline);
+                    ApplyAttributes(property.GetAttributes(), pipeline);
+
+                    clientIndexes.Add(clientType, clients.Count);
+                    clients.Add(new ClientModel(
+                        clientType.ToDisplayString(TypeFormat),
+                        pipeline.Select(h => h.ToDisplayString(TypeFormat)).ToEquatableArray()));
+
+                    properties.Add(new PropertyModel(
+                        declaringInterface.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                        property.Name,
+                        property.Type.ToDisplayString(TypeFormat),
+                        clients.Count - 1));
+                }
+            }
+
+            var handlers = clients
+                .SelectMany(c => c.Pipeline)
+                .Distinct()
+                .ToEquatableArray();
+
+            return new CompositeModel(
+                fullyQualifiedName,
+                CreateGeneratedName(composite, fullyQualifiedName),
+                properties.ToEquatableArray(),
+                clients.ToEquatableArray(),
+                handlers,
+                _diagnostics.ToEquatableArray());
+        }
+
+        private bool TryGetClientProperty(ISymbol member, out IPropertySymbol property)
+        {
+            property = null!;
+
+            string? reason = member switch
+            {
+                { IsStatic: true } => "static abstract members are not supported",
+                IPropertySymbol { IsIndexer: true } => "indexers are not supported",
+                IPropertySymbol { SetMethod: not null } => "properties must be get-only",
+                IPropertySymbol { ReturnsByRef: true } or IPropertySymbol { ReturnsByRefReadonly: true } => "ref properties are not supported",
+                IPropertySymbol { Type.TypeKind: TypeKind.Error } => "",
+                IPropertySymbol { Type.TypeKind: not TypeKind.Interface } => "the property type must be a Refit interface",
+                IPropertySymbol => null,
+                IMethodSymbol { AssociatedSymbol: not null } => "",
+                IEventSymbol => "events are not supported",
+                IMethodSymbol => "methods are not supported; expose the API interface through a property instead",
+                _ => "only properties are supported"
+            };
+
+            if (reason is null) {
+                property = (IPropertySymbol)member;
+                return true;
+            }
+
+            // An empty reason means the member is reported elsewhere (accessors, broken types).
+            if (reason.Length > 0) {
+                _diagnostics.Add(DiagnosticInfo.Create(Diagnostics.UnsupportedMember, member, member.ToDisplayString(), _compositeName, reason));
+            }
+
+            return false;
+        }
+
+        private void ApplyAttributes(ImmutableArray<AttributeData> attributes, List<ITypeSymbol> pipeline)
+        {
+            // Source symbols return attributes in declaration order, which is what the pipeline rules are defined on.
+            foreach (var attribute in attributes) {
+                var attributeClass = attribute.AttributeClass;
+                if (attributeClass is null) continue;
+
+                var definition = attributeClass.OriginalDefinition;
+                var location = attribute.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation();
+
+                if (Is(definition, types.IgnoreAll)) {
+                    pipeline.Clear();
+                }
+                else if (Is(definition, types.Ignore) || Is(definition, types.GenericIgnore)) {
+                    var handler = GetHandlerType(attribute, attributeClass);
+                    if (handler is not null) {
+                        pipeline.RemoveAll(h => SymbolEqualityComparer.Default.Equals(h, handler));
+                    }
+                }
+                else if (Is(definition, types.Handler) || Is(definition, types.GenericHandler)) {
+                    var handler = GetHandlerType(attribute, attributeClass);
+                    if (handler is null || handler.TypeKind == TypeKind.Error) continue;
+
+                    if (!IsValidHandler(handler)) {
+                        _diagnostics.Add(DiagnosticInfo.Create(Diagnostics.InvalidHandler, location, handler.ToDisplayString()));
+                        continue;
+                    }
+
+                    if (!types.Compilation.IsSymbolAccessibleWithin(handler, types.Compilation.Assembly)) {
+                        _diagnostics.Add(DiagnosticInfo.Create(Diagnostics.InaccessibleType, location, handler.ToDisplayString(), _compositeName));
+                        continue;
+                    }
+
+                    AddHandler(pipeline, handler);
+                }
+            }
+        }
+
+        private static ITypeSymbol? GetHandlerType(AttributeData attribute, INamedTypeSymbol attributeClass)
+        {
+            if (attributeClass.IsGenericType) {
+                return attributeClass.TypeArguments[0];
+            }
+
+            return attribute.ConstructorArguments.Length == 1 ? attribute.ConstructorArguments[0].Value as ITypeSymbol : null;
+        }
+
+        private static void AddHandler(List<ITypeSymbol> pipeline, ITypeSymbol handler)
+        {
+            if (!pipeline.Contains(handler, SymbolEqualityComparer.Default)) {
+                pipeline.Add(handler);
+            }
+        }
+
+        private bool IsValidHandler(ITypeSymbol handler)
+        {
+            if (handler is not INamedTypeSymbol { TypeKind: TypeKind.Class, IsAbstract: false, IsUnboundGenericType: false }) return false;
+
+            for (var current = handler.BaseType; current is not null; current = current.BaseType) {
+                if (Is(current, types.DelegatingHandler)) return true;
+            }
+
+            return false;
+        }
+
+        private void CheckAccessible(ITypeSymbol type, ISymbol locationSymbol)
+        {
+            if (type.TypeKind == TypeKind.Error) return;
+
+            if (!types.Compilation.IsSymbolAccessibleWithin(type, types.Compilation.Assembly)) {
+                _diagnostics.Add(DiagnosticInfo.Create(Diagnostics.InaccessibleType, locationSymbol, type.ToDisplayString(), _compositeName));
+            }
+        }
+
+        private void CheckRefitMethods(ITypeSymbol clientType, ISymbol locationSymbol)
+        {
+            if (types.HttpMethod is null || clientType.TypeKind == TypeKind.Error) return;
+
+            var hasRefitMethod = new[] { clientType }
+                .Concat(clientType.AllInterfaces)
+                .SelectMany(i => i.GetMembers().OfType<IMethodSymbol>())
+                .Any(method => method.GetAttributes().Any(a => InheritsFrom(a.AttributeClass, types.HttpMethod)));
+
+            if (!hasRefitMethod) {
+                _diagnostics.Add(DiagnosticInfo.Create(Diagnostics.NoRefitMethods, locationSymbol, clientType.ToDisplayString()));
+            }
+        }
+
+        private static bool InheritsFrom(INamedTypeSymbol? type, INamedTypeSymbol baseType)
+        {
+            for (var current = type; current is not null; current = current.BaseType) {
+                if (Is(current, baseType)) return true;
+            }
+
+            return false;
+        }
+
+        private static bool Is(ISymbol? symbol, ISymbol? expected)
+        {
+            return expected is not null && SymbolEqualityComparer.Default.Equals(symbol, expected);
+        }
+    }
+
+    /// <summary>
+    /// Builds a readable, collision-free identifier: the containing namespaces and types joined with '_',
+    /// suffixed with a hash of the fully qualified name.
+    /// </summary>
+    private static string CreateGeneratedName(INamedTypeSymbol composite, string fullyQualifiedName)
+    {
+        var parts = new List<string>();
+        for (ISymbol? current = composite; current is not null; current = current.ContainingSymbol) {
+            if (current is INamespaceSymbol { IsGlobalNamespace: true } or IAssemblySymbol or IModuleSymbol) break;
+            parts.Add(current.Name);
+        }
+
+        parts.Reverse();
+
+        var sb = new StringBuilder();
+        foreach (var c in string.Join("_", parts)) {
+            sb.Append(char.IsLetterOrDigit(c) || c == '_' ? c : '_');
+        }
+
+        // FNV-1a: stable across processes, unlike string.GetHashCode.
+        var hash = 2166136261u;
+        foreach (var c in fullyQualifiedName) {
+            hash = unchecked((hash ^ c) * 16777619u);
+        }
+
+        return $"{sb}_{hash:x8}";
     }
 }

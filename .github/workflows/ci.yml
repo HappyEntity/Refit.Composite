@@ -10,6 +10,14 @@ jobs:
     build-and-test:
         runs-on: ubuntu-latest
 
+        strategy:
+            fail-fast: false
+            matrix:
+                # Lowest and highest Refit versions in the supported range.
+                refit: [ '15.0.0', '16.*' ]
+
+        name: Build & Test (Refit ${{ matrix.refit }})
+
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -23,10 +31,10 @@ jobs:
                       10.0.x
 
             - name: Restore dependencies
-              run: dotnet restore
+              run: dotnet restore -p:RefitTestVersion="${{ matrix.refit }}"
 
             - name: Build Solution
-              run: dotnet build --configuration Release --no-restore
+              run: dotnet build --configuration Release --no-restore -p:RefitTestVersion="${{ matrix.refit }}"
 
             - name: Run Tests
               run: dotnet test --configuration Release --no-build --verbosity normal

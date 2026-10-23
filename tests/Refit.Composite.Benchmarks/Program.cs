@@ -1,4 +1,4 @@
-﻿using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -24,9 +24,10 @@ public class ApiResolveBenchmark
     {
         var services = new ServiceCollection();
 
-        services.AddTransient<IMockApi>(_ => new FakeMockApi());
-
         services.AddRefitComposite<IBenchmarkComposite>("https://localhost");
+
+        // Composite clients are keyed by the composite type; the plain registration aliases the same client.
+        services.AddKeyedTransient<IMockApi>(typeof(IBenchmarkComposite), (_, _) => new FakeMockApi());
 
         services.AddScoped<OldRefitApi>();
 
