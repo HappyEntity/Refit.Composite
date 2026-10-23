@@ -157,6 +157,9 @@ public class RefitCompositeTests
     [Theory]
     [InlineData("")]
     [InlineData("/relative")]
+    [InlineData("relative/path")]
+    [InlineData("file:///etc/hosts")]
+    [InlineData("ftp://example.com")]
     public void AddRefitComposite_WithoutAbsoluteBaseAddress_ShouldThrow(string baseApi)
     {
         var services = new ServiceCollection();

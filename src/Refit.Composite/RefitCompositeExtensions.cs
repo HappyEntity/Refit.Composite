@@ -18,12 +18,12 @@ public static class RefitCompositeExtensions
     /// </summary>
     /// <typeparam name="TApi">The composite interface type that inherits from <see cref="IRefitComposite"/>.</typeparam>
     /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
-    /// <param name="baseApi">The absolute base URL of the remote API.</param>
+    /// <param name="baseApi">The absolute http(s) base URL of the remote API.</param>
     /// <param name="settings">Optional <see cref="RefitSettings"/> to customize the Refit client behavior.</param>
     /// <param name="configure">An optional delegate to further configure the underlying <see cref="IHttpClientBuilder"/> of each API client.
     /// It runs after the handlers declared with attributes have been added.</param>
     /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="baseApi"/> is null, empty or not an absolute URI.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="baseApi"/> is null, empty or not an absolute http(s) URI.</exception>
     /// <exception cref="InvalidOperationException">Thrown when <typeparamref name="TApi"/> is already registered,
     /// or when no generated registration exists for it.</exception>
     public static IServiceCollection AddRefitComposite<TApi>(
@@ -40,7 +40,7 @@ public static class RefitCompositeExtensions
 #endif
 
         if (!Uri.TryCreate(baseApi, UriKind.Absolute, out var baseUri)) {
-            throw new ArgumentException($"The base API URL '{baseApi}' must be an absolute URI.", nameof(baseApi));
+            throw new ArgumentException($"The base API URL '{baseApi}' must be an absolute http or https URI.", nameof(baseApi));
         }
 
         return services.AddRefitComposite<TApi>(baseUri, settings, configure);
@@ -53,12 +53,12 @@ public static class RefitCompositeExtensions
     /// </summary>
     /// <typeparam name="TApi">The composite interface type that inherits from <see cref="IRefitComposite"/>.</typeparam>
     /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
-    /// <param name="baseApi">The absolute base URL of the remote API.</param>
+    /// <param name="baseApi">The absolute http(s) base URL of the remote API.</param>
     /// <param name="settings">Optional <see cref="RefitSettings"/> to customize the Refit client behavior.</param>
     /// <param name="configure">An optional delegate to further configure the underlying <see cref="IHttpClientBuilder"/> of each API client.
     /// It runs after the handlers declared with attributes have been added.</param>
     /// <returns>The same <see cref="IServiceCollection"/> instance for chaining.</returns>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="baseApi"/> is not an absolute URI.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="baseApi"/> is not an absolute http(s) URI.</exception>
     /// <exception cref="InvalidOperationException">Thrown when <typeparamref name="TApi"/> is already registered,
     /// or when no generated registration exists for it.</exception>
     public static IServiceCollection AddRefitComposite<TApi>(
@@ -74,8 +74,9 @@ public static class RefitCompositeExtensions
         if (baseApi is null) throw new ArgumentNullException(nameof(baseApi));
 #endif
 
-        if (!baseApi.IsAbsoluteUri) {
-            throw new ArgumentException($"The base API URL '{baseApi}' must be an absolute URI.", nameof(baseApi));
+        // On Unix "/path" parses as an absolute file:// URI, so checking IsAbsoluteUri alone is not enough.
+        if (!baseApi.IsAbsoluteUri || (baseApi.Scheme != Uri.UriSchemeHttp && baseApi.Scheme != Uri.UriSchemeHttps)) {
+            throw new ArgumentException($"The base API URL '{baseApi}' must be an absolute http or https URI.", nameof(baseApi));
         }
 
         var compositeType = typeof(TApi);
