@@ -128,7 +128,7 @@ public sealed class CompositeApiGenerator : IIncrementalGenerator
             sb.AppendLine($"            context.AddClient<{client.Type}>(static builder =>");
             sb.AppendLine("            {");
             foreach (var handler in client.Pipeline) {
-                sb.AppendLine($"                global::Microsoft.Extensions.DependencyInjection.HttpClientBuilderExtensions.AddHttpMessageHandler<{handler}>(builder);");
+                sb.AppendLine($"                {RegistrationNamespace}.RefitCompositeRegistrationContext.AddMessageHandler<{handler}>(builder);");
             }
 
             sb.AppendLine("            });");

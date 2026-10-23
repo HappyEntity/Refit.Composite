@@ -60,6 +60,19 @@ public sealed class RefitCompositeRegistrationContext
     }
 
     /// <summary>
+    /// Adds a message handler resolved from DI to a client pipeline.
+    /// Generated code calls this instead of <c>HttpClientBuilderExtensions</c> directly, so a user type with that name
+    /// in the <c>Microsoft.Extensions.DependencyInjection</c> namespace cannot shadow it.
+    /// </summary>
+    /// <typeparam name="THandler">The handler type.</typeparam>
+    /// <param name="builder">The client builder.</param>
+    public static void AddMessageHandler<THandler>(IHttpClientBuilder builder)
+        where THandler : DelegatingHandler
+    {
+        builder.AddHttpMessageHandler<THandler>();
+    }
+
+    /// <summary>
     /// Registers a source-generated Refit client keyed by <see cref="CompositeType"/>, with its own named <see cref="HttpClient"/>.
     /// </summary>
     /// <typeparam name="TClient">The Refit interface.</typeparam>

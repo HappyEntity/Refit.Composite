@@ -109,6 +109,23 @@ public class CompositeApiGeneratorTests
     }
 
     [Fact]
+    public void UserTypesShadowingFrameworkNames_ShouldCompile()
+    {
+        AssertCompiles(Api + """
+            namespace Microsoft.Extensions.DependencyInjection
+            {
+                public static class HttpClientBuilderExtensions { }
+                public static class ServiceCollectionServiceExtensions { }
+            }
+
+            public class Handler : DelegatingHandler { }
+
+            [ApiHandler<Handler>]
+            public interface IComposite : IRefitComposite { IApi Api { get; } }
+            """);
+    }
+
+    [Fact]
     public void PartialComposite_ShouldBeGeneratedOnce()
     {
         var (diagnostics, errors, result) = Run(Api + """
